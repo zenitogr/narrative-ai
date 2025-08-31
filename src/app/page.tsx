@@ -4,13 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { useContext } from "react";
 import { AppContext } from "@/components/AppManager";
 
 export default function Home() {
+  const context = useContext(AppContext);
+
+  if (!context) {
+    return null;
+  }
+
   const {
     suggestions,
     selectedSuggestions,
@@ -20,7 +25,7 @@ export default function Home() {
     getSuggestions,
     submitChoices,
     setUserComment,
-  } = useContext(AppContext);
+  } = context;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24">

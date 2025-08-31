@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from 'next/navigation';
+import { AppContextType, HistoryItem, StepData, Suggestion, UserChoice } from "@/lib/types";
 
 export default function AppManager({ children }: { children: React.ReactNode }) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -9,8 +10,9 @@ export default function AppManager({ children }: { children: React.ReactNode }) 
   const [loading, setLoading] = useState(false);
   const [currentStepId, setCurrentStepId] = useState<number | null>(null);
   const [userComment, setUserComment] = useState("");
+  const router = useRouter();
 
-  const getSuggestions = async (prompt?: string) => {
+  const getSuggestions = useCallback(async (prompt?: string) => {
     setLoading(true);
     setSuggestions([]);
     setSelectedSuggestions([]);
@@ -55,7 +57,7 @@ export default function AppManager({ children }: { children: React.ReactNode }) 
           if (parsed.choices && parsed.choices[0].delta.content) {
             contentResponse += parsed.choices[0].delta.content;
           }
-        } catch (e) {
+        } catch {
           // Not a JSON line, probably just text
         }
       }
@@ -68,7 +70,7 @@ export default function AppManager({ children }: { children: React.ReactNode }) 
 
     setLoading(false);
     setUserComment(""); // Clear comment after use
-  };
+  }, [userComment]);
 
   const submitChoices = async (isFork = false) => {
     const response = await fetch('/api/choice', {
@@ -95,27 +97,27 @@ export default function AppManager({ children }: { children: React.ReactNode }) 
       const { type, stepId } = customEvent.detail;
 
       const response = await fetch(`/api/history?stepId=${stepId}`);
-      const stepData = await response.json();
+      const stepData: StepData = await response.json();
 
       if (type === 'fork') {
         setCurrentStepId(stepId);
-        const nextPrompt = `Based on my previous choices (${stepData.user_choices.map((c: any) => c.suggestions.suggestion_text).join(', ')}), give me 10 new suggestions. Return them as a numbered list inside <suggestions> tags.`;
+        const nextPrompt = `Based on my previous choices (${stepData.user_choices.map((c: UserChoice) => c.suggestions.suggestion_text).join(', ')}), give me 10 new suggestions. Return them as a numbered list inside <suggestions> tags.`;
         getSuggestions(nextPrompt);
       } else if (type === 'version') {
-        setSuggestions(stepData.suggestions.map((s: any) => s.suggestion_text));
+        setSuggestions(stepData.suggestions.map((s: Suggestion) => s.suggestion_text));
         setSelectedSuggestions([]);
         setCurrentStepId(stepData.parent_step_id);
       } else if (type === 'continue') {
         const historyResponse = await fetch('/api/history');
-        const fullHistory: any[] = await historyResponse.json();
+        const fullHistory: HistoryItem[] = await historyResponse.json();
         const stepMap = new Map(fullHistory.map((item) => [item.id, item]));
-        let currentStep = stepMap.get(stepId);
-        const historyToContinue: any[] = [];
+        let currentStep: HistoryItem | undefined = stepMap.get(stepId);
+        const historyToContinue: HistoryItem[] = [];
         while(currentStep) {
           historyToContinue.unshift(currentStep);
-          currentStep = stepMap.get(currentStep.parent_step_id);
+          currentStep = currentStep.parent_step_id ? stepMap.get(currentStep.parent_step_id) : undefined;
         }
-        const choiceText = historyToContinue.flatMap(h => h.user_choices.map((c: any) => c.suggestions.suggestion_text)).join(', ');
+        const choiceText = historyToContinue.flatMap(h => h.user_choices.map((c: UserChoice) => c.suggestions.suggestion_text)).join(', ');
         const nextPrompt = `Based on my previous choices (${choiceText}), give me 10 new suggestions. Return them as a numbered list inside <suggestions> tags.`;
         getSuggestions(nextPrompt);
         setCurrentStepId(stepId);
@@ -128,10 +130,8 @@ export default function AppManager({ children }: { children: React.ReactNode }) 
 
     window.addEventListener('version-control', handleVersionControl);
     return () => window.removeEventListener('version-control', handleVersionControl);
-  }, []);
-
-  const router = useRouter();
-  const contextValue = {
+  }, [getSuggestions, router]);
+  const contextValue: AppContextType = {
     suggestions,
     selectedSuggestions,
     loading,
@@ -155,4 +155,4 @@ export default function AppManager({ children }: { children: React.ReactNode }) 
   );
 }
 
-export const AppContext = React.createContext<any>(null);
+export const AppContext = React.createContext<AppContextType | null>(null);

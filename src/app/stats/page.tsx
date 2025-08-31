@@ -5,11 +5,7 @@ import { useEffect, useState, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 
-interface HistoryItem {
-  id: number;
-  parent_step_id: number | null;
-  // Add other properties as needed
-}
+import { HistoryItem } from "@/lib/types";
 
 function StatsContent() {
   const searchParams = useSearchParams();
@@ -63,7 +59,7 @@ function StatsContent() {
       const model = localStorage.getItem("analysisModel");
       const analysisPayload = relevantHistory.map(item => ({
         id: item.id,
-        user_choices: (item as any).user_choices,
+        user_choices: item.user_choices,
       }));
 
       const analysisResponse = await fetch('/api/analysis', {
