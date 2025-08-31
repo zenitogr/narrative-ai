@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
 
     // If not, generate new analysis
     const model = modelFromClient || 'llama3-8b-8192';
-    const prompt = `You are a personality analysis expert. Your task is to analyze a user's journey based on a series of choices they have made. The user's journey is provided as a JSON object. Focus *only* on the 'suggestion_text' within the 'user_choices' array for your analysis. Do not reference the number of choices made or any other metadata. Provide a thoughtful, narrative-style analysis of the user's personality and decision-making process based *exclusively* on the text of the choices they made.
+    const prompt = `You are a personality analysis expert. Your task is to analyze a single user's journey based on a series of choices they have made. The user's journey is provided as a JSON object, where each entry in the array represents a step in their decision-making process. Focus *only* on the 'suggestion_text' within the 'user_choices' array for your analysis. Do not reference the number of choices made or any other metadata. Provide a thoughtful, narrative-style analysis of the user's personality and decision-making process based *exclusively* on the text of the choices they made.
 
     User's Journey Data:
     ${JSON.stringify(history, null, 2)}`;
